@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: transitlink
+    runtime: python
+    plan: 0.5c-512mb
+    buildCommand: python -m compileall -q server.py
+    startCommand: python server.py
+    healthCheckPath: /health
+    envVars:
+      - key: TRANSITLINK_DB
+        value: /var/data/transitlink.sqlite3
+    disk:
+      name: transitlink-data
+      mountPath: /var/data
+      sizeGB: 1

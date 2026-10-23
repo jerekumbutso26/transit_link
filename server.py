@@ -179,7 +179,8 @@ class Handler(SimpleHTTPRequestHandler):
             token = secrets.token_urlsafe(32)
             db.execute("INSERT INTO sessions(token_hash,account_id,expires_at,created_at) VALUES(?,?,?,?)",
                        (hashlib.sha256(token.encode()).hexdigest(), account["id"], int(time.time()) + 60 * 60 * 24 * 14, int(time.time())))
-        cookie = f"transitlink_session={token}; HttpOnly; SameSite=Lax; Path=/; Max-Age={60*60*24*14}"
+        secure = "; Secure" if os.environ.get("RENDER") or os.environ.get("RENDER_EXTERNAL_URL") else ""
+        cookie = f"transitlink_session={token}; HttpOnly; SameSite=Lax; Path=/; Max-Age={60*60*24*14}{secure}"
         return self.send_json(HTTPStatus.OK, {"ok": True, "role": role}, cookie)
 
     def logout(self):
@@ -193,6 +194,13 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         path = urlparse(self.path).path
+        if path == "/health":
+            try:
+                with connect_db() as db:
+                    db.execute("SELECT 1").fetchone()
+                return self.send_json(HTTPStatus.OK, {"status": "ok"})
+            except sqlite3.Error:
+                return self.send_json(HTTPStatus.SERVICE_UNAVAILABLE, {"status": "unavailable"})
         if path == "/accounts/session":
             cookie = SimpleCookie(self.headers.get("Cookie", ""))
             token = cookie.get("transitlink_session")
@@ -212,9 +220,10 @@ class Handler(SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     init_db()
     port = int(os.environ.get("PORT", "8000"))
-    print(f"TransitLink running at http://127.0.0.1:{port}")
+    host = os.environ.get("HOST", "0.0.0.0")
+    print(f"TransitLink listening on {host}:{port}")
     print(f"SQLite database: {DB_PATH}")
     try:
-        ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
+        ThreadingHTTPServer((host, port), Handler).serve_forever()
     except KeyboardInterrupt:
         print("\nTransitLink server stopped")

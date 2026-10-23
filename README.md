@@ -14,6 +14,12 @@ Then visit [http://127.0.0.1:8000](http://127.0.0.1:8000) and use **Log in / Cre
 
 Use Ctrl+C in the server terminal to stop the local server. Set `TRANSITLINK_DB=/path/to/file.sqlite3` to store the database elsewhere, or `PORT=8080` to choose another port. The `data/` database files are excluded from Git. Back up that file if you need to preserve locally registered accounts.
 
+## Deploy to Render
+
+The repository includes `render.yaml` for a Render Blueprint deploy. It binds the Python server to Render's port, checks `/health`, and stores the SQLite file under `/var/data`. The configured persistent disk keeps registered accounts across restarts and deploys. Render's local persistent disks require a paid web service and prevent scaling that service to multiple instances; for larger deployments, move account data to managed PostgreSQL.
+
+To deploy, connect the GitHub repository to Render, choose **New + → Blueprint**, and select the repository containing this `render.yaml`. Review the service plan and persistent disk before applying the Blueprint. After it becomes live, open the generated `onrender.com` URL. Keep `TRANSITLINK_DB` pointing inside `/var/data` so SQLite remains on the mounted disk.
+
 This is a local prototype, not a production identity service: before public deployment, use HTTPS, email/phone verification, account recovery, CSRF protection, rate limiting, secure secret/configuration management, and an operator review/approval flow for driver and fleet details. The sample route choices and fares are demo data.
 
 ## 1. System architecture and stack
